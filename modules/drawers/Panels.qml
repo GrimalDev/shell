@@ -9,6 +9,7 @@ import qs.modules.notifications as Notifications
 import qs.modules.osd as Osd
 import qs.modules.session as Session
 import qs.modules.sidebar as Sidebar
+import qs.modules.cliphist as Cliphist
 import qs.modules.utilities as Utilities
 import qs.modules.bar.popouts as BarPopouts
 import qs.modules.utilities.toasts as Toasts
@@ -33,6 +34,7 @@ Item {
     readonly property alias utilities: utilities
     readonly property alias toasts: toasts
     readonly property alias sidebar: sidebar
+    readonly property alias cliphist: cliphist
 
     anchors.fill: parent
     anchors.margins: borderThickness
@@ -149,5 +151,14 @@ Item {
         anchors.top: notifications.bottom
         anchors.bottom: utilities.top
         anchors.right: parent.right
+    }
+
+    Cliphist.Wrapper {
+        id: cliphist
+
+        visibilities: root.visibilities
+
+        anchors.top: parent.top
+        anchors.left: parent.left
     }
 }

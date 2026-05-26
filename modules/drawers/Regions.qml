@@ -22,6 +22,12 @@ Region {
     intersection: Intersection.Xor
 
     R {
+        panel: root.panels.cliphist
+        y: 0
+        height: panel.height * (1 - root.panels.cliphist.offsetScale) + root.borderThickness
+    }
+
+    R {
         panel: root.panels.dashboard
         y: 0
         height: panel.height * (1 - root.panels.dashboard.offsetScale) + root.borderThickness
