@@ -24,6 +24,7 @@ Item {
     property real sourceVolume
     property bool sourceMuted
     property real brightness
+    property real keyboardBrightness
 
     function show(): void {
         visibilities.osd = true;
@@ -36,6 +37,7 @@ Item {
         sourceVolume = Audio.sourceVolume;
         sourceMuted = Audio.sourceMuted;
         brightness = root.monitor?.brightness ?? 0;
+        keyboardBrightness = Brightness.kbBrightness;
     }
 
     visible: offsetScale < 1
@@ -83,6 +85,15 @@ Item {
         target: root.monitor
     }
 
+    Connections {
+        function onKbBrightnessChanged(): void {
+            root.show();
+            root.keyboardBrightness = Brightness.kbBrightness;
+        }
+
+        target: Brightness
+    }
+
     Timer {
         id: timer
 
@@ -110,6 +121,7 @@ Item {
             sourceVolume: root.sourceVolume
             sourceMuted: root.sourceMuted
             brightness: root.brightness
+            keyboardBrightness: root.keyboardBrightness
         }
     }
 }

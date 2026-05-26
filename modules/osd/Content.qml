@@ -19,6 +19,7 @@ Item {
     required property real sourceVolume
     required property bool sourceMuted
     required property real brightness
+    required property real keyboardBrightness
 
     implicitWidth: layout.implicitWidth + Tokens.padding.large * 2
     implicitHeight: layout.implicitHeight + Tokens.padding.large * 2
@@ -101,6 +102,36 @@ Item {
                     icon: `brightness_${(Math.round(value * 6) + 1)}`
                     value: root.brightness
                     onMoved: root.monitor?.setBrightness(value)
+                }
+            }
+        }
+
+        // Keyboard brightness
+        WrappedLoader {
+            shouldBeActive: Brightness.kbAvailable
+
+            sourceComponent: CustomMouseArea {
+                function onWheel(event: WheelEvent) {
+                    if (event.angleDelta.y > 0)
+                        Brightness.increaseKbdBrightness();
+                    else if (event.angleDelta.y < 0)
+                        Brightness.decreaseKbdBrightness();
+                }
+
+                implicitWidth: Tokens.sizes.osd.sliderWidth
+                implicitHeight: Tokens.sizes.osd.sliderHeight
+
+                FilledSlider {
+                    anchors.fill: parent
+
+                    icon: value <= 0.5 ? "backlight_low" : "backlight_high"
+                    value: root.keyboardBrightness
+                    onMoved: {
+                        if (value > root.keyboardBrightness)
+                            Brightness.increaseKbdBrightness();
+                        else if (value < root.keyboardBrightness)
+                            Brightness.decreaseKbdBrightness();
+                    }
                 }
             }
         }

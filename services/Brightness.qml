@@ -20,6 +20,9 @@ Singleton {
     readonly property list<Monitor> monitors: variants.instances // qmllint disable incompatible-type
     property bool appleDisplayPresent: false
 
+    property real kbBrightness: 0
+    property bool kbAvailable: false
+
     function getMonitorForScreen(screen: ShellScreen): var {
         return monitors.find(m => m.modelData === screen); // qmllint disable missing-property
     }
@@ -59,6 +62,14 @@ Singleton {
             monitor.setBrightness(monitor.brightness - GlobalConfig.services.brightnessIncrement);
     }
 
+    function increaseKbdBrightness(): void {
+        Quickshell.execDetached(["hyprctl", "dispatch", "global", "caelestia:kbdBrightnessUp"]);
+    }
+
+    function decreaseKbdBrightness(): void {
+        Quickshell.execDetached(["hyprctl", "dispatch", "global", "caelestia:kbdBrightnessDown"]);
+    }
+
     onMonitorsChanged: {
         ddcMonitors = [];
         ddcProc.running = true;
@@ -92,6 +103,22 @@ Singleton {
         }
     }
 
+    Process {
+        running: true
+        command: ["sh", "-c", "echo a b c $(brightnessctl -d 'kbd_backlight' g 2>/dev/null) $(brightnessctl -d 'kbd_backlight' m 2>/dev/null)"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const parts = text.trim().split(" ");
+                const cur = parseInt(parts[3]);
+                const max = parseInt(parts[4]);
+                if (!isNaN(cur) && !isNaN(max) && max > 0) {
+                    root.kbBrightness = cur / max;
+                    root.kbAvailable = true;
+                }
+            }
+        }
+    }
+
     // qmllint disable unresolved-type
     CustomShortcut {
         // qmllint enable unresolved-type
@@ -106,6 +133,28 @@ Singleton {
         name: "brightnessDown"
         description: "Decrease brightness"
         onPressed: root.decreaseBrightness()
+    }
+
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        name: "kbdBrightnessUp"
+        description: "Increase keyboard brightness"
+        onPressed: {
+            root.kbBrightness = Math.min(1, root.kbBrightness + GlobalConfig.services.brightnessIncrement);
+            Quickshell.execDetached(["brightnessctl", "-d", "kbd_backlight", "set", `+${Math.round(GlobalConfig.services.brightnessIncrement * 100)}%`]);
+        }
+    }
+
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        name: "kbdBrightnessDown"
+        description: "Decrease keyboard brightness"
+        onPressed: {
+            root.kbBrightness = Math.max(0, root.kbBrightness - GlobalConfig.services.brightnessIncrement);
+            Quickshell.execDetached(["brightnessctl", "-d", "kbd_backlight", "set", `${Math.round(GlobalConfig.services.brightnessIncrement * 100)}%-`]);
+        }
     }
 
     IpcHandler {
@@ -159,6 +208,23 @@ Singleton {
         }
 
         target: "brightness"
+    }
+
+    IpcHandler {
+        function get(): real {
+            return root.kbBrightness;
+        }
+
+        function set(value: string): string {
+            const parsed = parseFloat(value);
+            if (isNaN(parsed))
+                return `Failed to parse value: ${value}`;
+            root.kbBrightness = Math.max(0, Math.min(1, parsed));
+            Quickshell.execDetached(["brightnessctl", "-d", "kbd_backlight", "set", `${Math.round(parsed * 100)}%`]);
+            return `Set keyboard brightness to ${+root.kbBrightness.toFixed(2)}`;
+        }
+
+        target: "kbdBrightness"
     }
 
     component Monitor: QtObject {
