@@ -27,24 +27,28 @@ Item {
     readonly property var dashboardTabs: {
         const allTabs = [
             {
+                key: "dashboard",
                 component: dashComponent,
                 iconName: "dashboard",
                 text: qsTr("Dashboard"),
                 enabled: Config.dashboard.showDashboard
             },
             {
+                key: "media",
                 component: mediaComponent,
                 iconName: "queue_music",
                 text: qsTr("Media"),
                 enabled: Config.dashboard.showMedia
             },
             {
+                key: "performance",
                 component: performanceComponent,
                 iconName: "speed",
                 text: qsTr("Performance"),
                 enabled: Config.dashboard.showPerformance && (Config.dashboard.performance.showCpu || Config.dashboard.performance.showGpu || Config.dashboard.performance.showMemory || Config.dashboard.performance.showStorage || Config.dashboard.performance.showNetwork || Config.dashboard.performance.showBattery)
             },
             {
+                key: "weather",
                 component: weatherComponent,
                 iconName: "cloud",
                 text: qsTr("Weather"),
@@ -56,9 +60,23 @@ Item {
 
     readonly property real nonAnimWidth: view.implicitWidth + viewWrapper.anchors.margins * 2
     readonly property real nonAnimHeight: tabs.implicitHeight + tabs.anchors.topMargin + view.implicitHeight + viewWrapper.anchors.margins * 2
+    readonly property int maxTabIndex: Math.max(0, dashboardTabs.length - 1)
 
     implicitWidth: nonAnimWidth
     implicitHeight: nonAnimHeight
+
+    function clampCurrentTab(): void {
+        if (root.dashboardTabs.length === 0)
+            return;
+
+        if (root.dashState.currentTab > root.maxTabIndex)
+            root.dashState.currentTab = root.maxTabIndex;
+        else if (root.dashState.currentTab < 0)
+            root.dashState.currentTab = 0;
+    }
+
+    onDashboardTabsChanged: root.clampCurrentTab()
+    Component.onCompleted: root.clampCurrentTab()
 
     Tabs {
         id: tabs

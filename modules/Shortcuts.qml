@@ -12,6 +12,26 @@ Scope {
     property bool launcherInterrupted
     readonly property bool hasFullscreen: Hypr.focusedWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false
 
+    function toggleDashboardSectionWithRetry(section: string, retries: int): void {
+        const visibilities = Visibilities.getForActive();
+        if (!visibilities)
+            return;
+
+        const dashboard = Visibilities.getDashboardForActive();
+        if (dashboard) {
+            dashboard.toggleSection(section);
+            return;
+        }
+
+        visibilities.dashboard = true;
+        if (retries > 0)
+            Qt.callLater(() => root.toggleDashboardSectionWithRetry(section, retries - 1));
+    }
+
+    function toggleDashboardSection(section: string): void {
+        root.toggleDashboardSectionWithRetry(section, 5);
+    }
+
     // qmllint disable unresolved-type
     CustomShortcut {
         // qmllint enable unresolved-type
@@ -42,7 +62,49 @@ Scope {
             if (root.hasFullscreen)
                 return;
             const visibilities = Visibilities.getForActive();
-            visibilities.dashboard = !visibilities.dashboard;
+            if (!visibilities)
+                return;
+
+            if (visibilities.dashboard)
+                visibilities.dashboard = false;
+            else
+                root.toggleDashboardSection("dashboard");
+        }
+    }
+
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        name: "dashboardMedia"
+        description: "Open dashboard media tab"
+        onPressed: {
+            if (root.hasFullscreen)
+                return;
+            root.toggleDashboardSection("media");
+        }
+    }
+
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        name: "dashboardPerformance"
+        description: "Open dashboard performance tab"
+        onPressed: {
+            if (root.hasFullscreen)
+                return;
+            root.toggleDashboardSection("performance");
+        }
+    }
+
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        name: "dashboardWeather"
+        description: "Open dashboard weather tab"
+        onPressed: {
+            if (root.hasFullscreen)
+                return;
+            root.toggleDashboardSection("weather");
         }
     }
 
@@ -131,6 +193,12 @@ Scope {
             } else {
                 console.warn(lc, `Drawer "${drawer}" does not exist`);
             }
+        }
+
+        function openDashboardSection(section: string): void {
+            if (root.hasFullscreen)
+                return;
+            root.toggleDashboardSection(section);
         }
 
         function list(): string {

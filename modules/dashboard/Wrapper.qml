@@ -6,12 +6,15 @@ import Caelestia
 import Caelestia.Config
 import qs.components
 import qs.components.filedialog
+import qs.services
 import qs.utils
 
 Item {
     id: root
 
+    required property ShellScreen screen
     required property DrawerVisibilities visibilities
+    readonly property var tabNames: ["dashboard", "media", "performance", "weather"]
     readonly property bool needsKeyboard: (content.item as Content)?.needsKeyboard ?? false
     readonly property DashboardState dashState: DashboardState {
         reloadableId: "dashboardState"
@@ -31,6 +34,92 @@ Item {
     readonly property real nonAnimHeight: state === "visible" ? ((content.item as Content)?.nonAnimHeight ?? 0) : 0
     readonly property bool shouldBeActive: visibilities.dashboard && Config.dashboard.enabled
     property real offsetScale: shouldBeActive ? 0 : 1
+    property string pendingSection: ""
+
+    function normalizeSection(section: string): string {
+        return (section ?? "").toLowerCase();
+    }
+
+    function sectionAtIndex(index: int): string {
+        const contentItem = content.item as Content;
+        if (!contentItem)
+            return "";
+
+        const tabs = contentItem.dashboardTabs;
+        const tab = tabs[index];
+        return (tab?.key ?? tabNames[index] ?? "").toLowerCase();
+    }
+
+    function currentSection(): string {
+        if (pendingSection)
+            return pendingSection;
+        return root.sectionAtIndex(dashState.currentTab);
+    }
+
+    function setSection(section: string): bool {
+        const contentItem = content.item as Content;
+        if (!contentItem)
+            return false;
+
+        const wantedTab = root.normalizeSection(section);
+        const tabs = contentItem.dashboardTabs;
+        if (tabs.length === 0)
+            return false;
+
+        for (let i = 0; i < tabs.length; i++) {
+            const tab = tabs[i];
+            if ((tab?.key ?? tabNames[i] ?? "").toLowerCase() === wantedTab) {
+                dashState.currentTab = i;
+                return true;
+            }
+        }
+
+        dashState.currentTab = 0;
+        return true;
+    }
+
+    function openSection(section: string): void {
+        const normalizedSection = root.normalizeSection(section);
+        pendingSection = normalizedSection;
+        visibilities.dashboard = true;
+
+        if (normalizedSection.length === 0)
+            return;
+
+        Qt.callLater(() => root.applyPendingSection());
+    }
+
+    function toggleSection(section: string): void {
+        const normalizedSection = root.normalizeSection(section);
+        if (!normalizedSection) {
+            visibilities.dashboard = !visibilities.dashboard;
+            return;
+        }
+
+        if (visibilities.dashboard && root.currentSection() === normalizedSection) {
+            pendingSection = "";
+            visibilities.dashboard = false;
+            return;
+        }
+
+        root.openSection(normalizedSection);
+    }
+
+    function applyPendingSection(): void {
+        if (!pendingSection)
+            return;
+
+        if (!(content.item as Content))
+            return;
+
+        if (root.setSection(pendingSection))
+            pendingSection = "";
+    }
+
+    onShouldBeActiveChanged: {
+        if (shouldBeActive)
+            root.applyPendingSection();
+    }
 
     visible: offsetScale < 1
     anchors.topMargin: (-implicitHeight - 5) * offsetScale
@@ -57,5 +146,10 @@ Item {
             dashState: root.dashState
             facePicker: root.facePicker
         }
+
+        onLoaded: root.applyPendingSection()
     }
+
+    Component.onCompleted: Visibilities.loadDashboard(root.screen, root)
+    onScreenChanged: Visibilities.loadDashboard(root.screen, root)
 }
